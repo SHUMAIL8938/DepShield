@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { rateLimit } from 'express-rate-limit';
+import { clerkMiddleware } from '@clerk/express';
 
 dotenv.config();
 
@@ -29,7 +30,7 @@ const scanLimiter = rateLimit({
 
 app.use(globalLimiter);
 app.use(express.json({ limit: '500kb' }));
-
+app.use(clerkMiddleware());
 
 
 app.use((err, req, res, next) => {
