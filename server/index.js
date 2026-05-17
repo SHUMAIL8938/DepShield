@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import { rateLimit } from 'express-rate-limit';
-
 
 dotenv.config();
 
@@ -30,3 +30,22 @@ const scanLimiter = rateLimit({
 app.use(globalLimiter);
 app.use(express.json({ limit: '500kb' }));
 
+
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Something went wrong.' });
+});
+
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('[DB] Connected to MongoDB');
+    startFeedCron();
+    app.listen(process.env.PORT || 5000, () => {
+      console.log(`[SERVER] Running on port ${process.env.PORT || 5000}`);
+    });
+  })
+  .catch(err => {
+    console.error('[DB] Connection failed:', err.message);
+    process.exit(1);
+  });
