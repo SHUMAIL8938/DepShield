@@ -1,4 +1,4 @@
-# DepShield 🛡️
+# DepShield 
 
 **Multi-ecosystem dependency vulnerability scanner with real-time threat intelligence.**
 
