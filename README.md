@@ -4,8 +4,7 @@
 
 Paste your manifest file or point at a GitHub repo → get a full security audit: vulnerabilities, outdated packages, license audit, health score, and a live threat feed — all powered by the free OSV.dev database.
 
-**Live demo:** [your-depshield.vercel.app](https://your-depshield.vercel.app)
-
+**Live demo:** 
 ---
 
 ## Features
@@ -157,6 +156,3 @@ Grade: A (90-100) · B (75-89) · C (60-74) · D (40-59) · F (0-39)
 
 ---
 
-## License
-
-MIT
