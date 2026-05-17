@@ -10,4 +10,15 @@ const vulnerabilitySchema = new mongoose.Schema({
   aliases: [String]
 }, { _id: false });
 
+const outdatedPackageSchema = new mongoose.Schema({
+  name: String,
+  current: String,
+  latest: String,
+updateType: { type: String, enum: ['major', 'minor', 'patch', 'unknown'] }}
+, { _id: false });
+
+const licenseSchema = new mongoose.Schema({
+  name: String,
+  license: String
+}, { _id: false });
 
