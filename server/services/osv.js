@@ -116,3 +116,31 @@ export const fetchRecentVulnerabilities = async () => {
   return results.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)).slice(0, 20);
 };
 
+const extractSeverity = (vuln) => {
+  if (vuln.database_specific?.severity) return vuln.database_specific.severity.toUpperCase();
+  if (vuln.severity?.length > 0) {
+    const cvss = vuln.severity.find(s => s.type === 'CVSS_V3');
+    if (cvss) {
+      const score = parseFloat(cvss.score);
+      if (score >= 9.0) return 'CRITICAL';
+      if (score >= 7.0) return 'HIGH';
+      if (score >= 4.0) return 'MEDIUM';
+      return 'LOW';
+    }
+  }
+  return 'UNKNOWN';
+};
+
+const extractFixedVersion = (vuln, pkgName) => {``
+  const affected = vuln.affected || [];
+  for (const aff of affected) {
+    if (aff.package?.name === pkgName) {
+      const ranges = aff.ranges || [];
+      for (const range of ranges) {
+        const fixed = range.events?.find(e => e.fixed);
+        if (fixed) return fixed.fixed;
+      }
+    }
+  }
+  return null;
+};
