@@ -1,7 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { rateLimit } from 'express-rate-limit';
 import { clerkMiddleware } from '@clerk/express';
@@ -10,9 +11,9 @@ import webhookRoutes from './routes/webhook.js';
 import feedRoutes from './routes/feed.js';
 import { startFeedCron } from './services/feedCron.js';
 
-dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
 app.use(helmet());
 app.use(cors({
@@ -53,8 +54,8 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('[DB] Connected to MongoDB');
     startFeedCron();
-    app.listen(process.env.PORT || 5000, () => {
-      console.log(`[SERVER] Running on port ${process.env.PORT || 5000}`);
+    app.listen(PORT, '0.0.0.0', ()  => {
+      console.log(`[SERVER] Running on port ${PORT}`);
     });
   })
   .catch(err => {
