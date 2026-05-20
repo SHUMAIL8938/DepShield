@@ -48,5 +48,36 @@ router.post('/register', authenticate, async (req, res) => {
   }
 });
 
+router.post('/github', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const signature = req.headers['x-hub-signature-256'];
+    const event = req.headers['x-github-event'];
+
+    if (!signature || event !== 'push') {
+      return res.status(200).json({ message: 'Ignored.' });
+    }
+
+    const payload = JSON.parse(req.body.toString());
+    const repoFullName = payload.repository?.full_name;
+    if (!repoFullName) return res.status(200).json({ message: 'No repo.' });
+
+    const webhooks = await Webhook.find({ repoFullName, active: true }).select('+secret');
+
+    for (const webhook of webhooks) {
+      const expected = `sha256=${crypto.createHmac('sha256', webhook.secret).update(req.body).digest('hex')}`;
+      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) continue;
+
+      webhook.lastTriggeredAt = new Date();
+      await webhook.save();
+
+    }
+
+    res.status(200).json({ message: 'OK' });
+  } catch (err) {
+    console.error('[WEBHOOK] Error:', err.message);
+    res.status(200).json({ message: 'Processed.' });
+  }
+});
+
 
 export default router;
