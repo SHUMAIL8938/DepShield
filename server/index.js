@@ -5,6 +5,10 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { rateLimit } from 'express-rate-limit';
 import { clerkMiddleware } from '@clerk/express';
+import scanRoutes from './routes/scan.js';
+import webhookRoutes from './routes/webhook.js';
+import feedRoutes from './routes/feed.js';
+import { startFeedCron } from './services/feedCron.js';
 
 dotenv.config();
 
@@ -32,6 +36,13 @@ app.use(globalLimiter);
 app.use(express.json({ limit: '500kb' }));
 app.use(clerkMiddleware());
 
+app.use('/api/scan', scanLimiter, scanRoutes);
+app.use('/api/webhook', webhookRoutes);
+app.use('/api/feed', feedRoutes);
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ONLINE', timestamp: new Date().toISOString() });
+});
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
