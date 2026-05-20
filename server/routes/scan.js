@@ -78,5 +78,27 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
+router.get('/', authenticate, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const skip = (page - 1) * limit;
+
+    const [scans, total] = await Promise.all([
+      Scan.find({ userId: req.auth().userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select('-vulnerabilities -outdatedPackages -licenses'),
+      Scan.countDocuments({ userId: req.auth().userId })
+    ]);
+
+    res.json({ scans, total, page, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to fetch scans.' });
+  }
+});
+
+
 
 export default router;
