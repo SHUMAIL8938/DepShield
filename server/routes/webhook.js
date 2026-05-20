@@ -79,6 +79,7 @@ router.post('/github', express.raw({ type: 'application/json' }), async (req, re
 
       webhook.lastTriggeredAt = new Date();
       await webhook.save();
+      triggerScan(webhook).catch(console.error);
     }
 
     res.status(200).json({ message: 'OK' });
@@ -88,6 +89,35 @@ router.post('/github', express.raw({ type: 'application/json' }), async (req, re
   }
 });
 
+const triggerScan = async (webhook) => {
+  try {
+    const startTime = Date.now();
+    const { content, filename, ecosystem } = await fetchManifestFromGithub(webhook.repoFullName, webhook.manifestFile);
+    const dependencies = await parseManifest(content, ecosystem);
+    const [vulnerabilities, outdatedPackages, licenses] = await Promise.all([
+      scanVulnerabilities(dependencies, ecosystem),
+      checkOutdatedPackages(dependencies, ecosystem),
+      fetchLicenses(dependencies, ecosystem)
+    ]);
+    const { score, grade } = calculateHealthScore(vulnerabilities, outdatedPackages);
 
+    await Scan.create({
+      userId: webhook.userId,
+      ecosystem,
+      manifestFile: filename,
+      sourceType: 'github',
+      githubRepo: webhook.repoFullName,
+      totalDependencies: dependencies.length,
+      healthScore: score,
+      grade,
+      vulnerabilities,
+      outdatedPackages,
+      licenses,
+      scanDurationMs: Date.now() - startTime
+    });
+  } catch (err) {
+    console.error('[WEBHOOK] Auto-scan failed:', err.message);
+  }
+};
 
 export default router;
