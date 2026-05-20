@@ -99,6 +99,24 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+router.get('/:id', authenticate, async (req, res) => {
+  try {
+    const scan = await Scan.findOne({ _id: req.params.id, userId: req.auth().userId });
+    if (!scan) return res.status(404).json({ error: 'NOT_FOUND', message: 'Scan not found.' });
+    res.json({ scan });
+  } catch (err) {
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to fetch scan.' });
+  }
+});
 
+router.delete('/:id', authenticate, async (req, res) => {
+  try {
+    const scan = await Scan.findOneAndDelete({ _id: req.params.id, userId: req.auth().userId });
+    if (!scan) return res.status(404).json({ error: 'NOT_FOUND', message: 'Scan not found.' });
+    res.json({ message: 'Scan deleted.' });
+  } catch (err) {
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to delete scan.' });
+  }
+});
 
 export default router;
