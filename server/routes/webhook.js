@@ -48,6 +48,16 @@ router.post('/register', authenticate, async (req, res) => {
   }
 });
 
+router.get('/', authenticate, async (req, res) => {
+  const webhooks = await Webhook.find({ userId: req.auth().userId });
+  res.json({ webhooks });
+});
+
+router.delete('/:id', authenticate, async (req, res) => {
+  await Webhook.findOneAndDelete({ _id: req.params.id, userId: req.auth().userId });
+  res.json({ message: 'Webhook deleted.' });
+});
+
 router.post('/github', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const signature = req.headers['x-hub-signature-256'];
@@ -69,7 +79,6 @@ router.post('/github', express.raw({ type: 'application/json' }), async (req, re
 
       webhook.lastTriggeredAt = new Date();
       await webhook.save();
-
     }
 
     res.status(200).json({ message: 'OK' });
@@ -78,6 +87,7 @@ router.post('/github', express.raw({ type: 'application/json' }), async (req, re
     res.status(200).json({ message: 'Processed.' });
   }
 });
+
 
 
 export default router;
