@@ -2,7 +2,7 @@ import axios from "axios";
 import { validateGithubRepo } from "../utils/ssrfGuard.js";
 import { detectEcosystem } from "../utils/manifestParser.js";
 
-const MANIFEST_FILES = [
+const MANIFEST_FILENAMES = [
   "package.json",
   "requirements.txt",
   "Pipfile",
@@ -31,25 +31,28 @@ export const fetchManifestFromGithub = async (repoFullName, specificFile = null)
   const validation = validateGithubRepo(repoFullName);
   if (!validation.valid) throw new Error(validation.reason);
   const cleanRepo = validation.cleaned;
- 
+
   if (specificFile) {
     return fetchFile(cleanRepo, specificFile);
   }
- 
+
   const manifestPaths = await findManifestFiles(cleanRepo);
- 
   if (manifestPaths.length === 0) {
     throw new Error('No supported manifest file found in repository.');
   }
- 
-  
-  manifestPaths.sort((a, b) => {
-    const depthA = a.split('/').length;
-    const depthB = b.split('/').length;
-    return depthA - depthB;
-  });
- 
-  return fetchFile(cleanRepo, manifestPaths[0]);
+  const results = await Promise.allSettled(
+    manifestPaths.map(path => fetchFile(cleanRepo, path))
+  );
+
+  const valid = results
+    .filter(r => r.status === 'fulfilled')
+    .map(r => r.value);
+
+  if (valid.length === 0) {
+    throw new Error('Could not read any manifest file.');
+  }
+  valid.sort((a, b) => b.content.length - a.content.length);
+  return valid[0];
 };
  
 export const findManifestFiles = async (repoFullName) => {
