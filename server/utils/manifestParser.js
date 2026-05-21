@@ -14,6 +14,17 @@ export const detectEcosystem = (filename) => {
   return null;
 };
 
+const cleanVersion = (version) => {
+  if (!version || typeof version !== 'string') return 'unknown';
+  
+  return version
+    .replace(/[\^~>=<]/g, '')   
+    .split(' ')[0]               
+    .split('||')[0]              
+    .split(',')[0]               
+    .trim();
+};
+
 export const parseManifest = async (content, ecosystem) => {
   const deps = [];
 
@@ -34,7 +45,7 @@ export const parseManifest = async (content, ecosystem) => {
           if (!name || !version || typeof version !== "string") continue;
           deps.push({
             name,
-            version: version.replace(/^[\^~>=<*]/, "").trim() || "unknown",
+            version: cleanVersion(version),
           });
         }
         break;
@@ -55,7 +66,7 @@ export const parseManifest = async (content, ecosystem) => {
             if (inDeps) {
               const match = line.match(/["']?([a-zA-Z0-9_-]+)["']?\s*[>=<!]/);
               if (match)
-                deps.push({ name: match[1], version: extractVersion(line) });
+                deps.push({ name: match[1], version: cleanVersion(extractVersion(line)) });
             }
           }
         } else {
@@ -67,7 +78,7 @@ export const parseManifest = async (content, ecosystem) => {
               /^([a-zA-Z0-9_-]+)\s*(?:[>=<!]=?\s*([\d.]+))?/,
             );
             if (match)
-              deps.push({ name: match[1], version: match[2] || "unknown" });
+              deps.push({ name: match[1], version: cleanVersion(match[2]) });
           }
         }
         break;
@@ -102,7 +113,7 @@ export const parseManifest = async (content, ecosystem) => {
         for (const match of matches) {
           deps.push({
             name: match[1],
-            version: match[2]?.replace(/^[~>=<]/, "") || "unknown",
+            version: cleanVersion(match[2]),
           });
         }
         break;
@@ -111,7 +122,7 @@ export const parseManifest = async (content, ecosystem) => {
       case "Go": {
         const matches = content.matchAll(/^\s+([^\s]+)\s+v([^\s]+)/gm);
         for (const match of matches) {
-          deps.push({ name: match[1], version: match[2] });
+          deps.push({ name: match[1], version: cleanVersion(match[2].replace(/^v/, '')) });
         }
         break;
       }
@@ -121,7 +132,7 @@ export const parseManifest = async (content, ecosystem) => {
         const allDeps = { ...json.require, ...json["require-dev"] };
         for (const [name, version] of Object.entries(allDeps)) {
           if (name === "php" || name.startsWith("ext-")) continue;
-          deps.push({ name, version: version.replace(/^[\^~>=<]/, "") });
+          deps.push({ name, version: cleanVersion(version) });
         }
         break;
       }
@@ -147,12 +158,12 @@ export const parseManifest = async (content, ecosystem) => {
             if (simple)
               deps.push({
                 name: simple[1],
-                version: simple[2].replace(/^[^0-9]*/, ""),
+                version: cleanVersion(simple[2]),
               });
             else if (table)
               deps.push({
                 name: table[1],
-                version: table[2].replace(/^[^0-9]*/, ""),
+                version: cleanVersion(table[2]),
               });
           }
         }
