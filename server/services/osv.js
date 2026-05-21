@@ -71,6 +71,7 @@ export const scanVulnerabilities = async (dependencies, ecosystem) => {
             });
           }
         }
+        console.log(`[OSV DEBUG] ${chunk[idx].name}: ${result.vulns?.length || 0} vulns`);
       });
     } catch (err) {
       console.error("[OSV] Batch query error:", err.message);
