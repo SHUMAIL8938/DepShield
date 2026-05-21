@@ -37,9 +37,15 @@ export const validateUrl = (urlString) => {
 };
 
 export const validateGithubRepo = (repoString) => {
+  const cleaned = repoString
+    .replace('https://github.com/', '')
+    .replace('http://github.com/', '')
+    .replace('github.com/', '')
+    .trim()
+    .replace(/\/$/, '');  
   const pattern = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
-  if (!pattern.test(repoString)) {
+  if (!pattern.test(cleaned)) {
     return { valid: false, reason: 'Invalid GitHub repo format. Use owner/repo.' };
   }
-  return { valid: true };
+  return { valid: true, cleaned };
 };

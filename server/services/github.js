@@ -15,27 +15,25 @@ const MANIFEST_FILES = [
   "Cargo.toml",
 ];
 
-export const fetchManifestFromGithub = async (
-  repoFullName,
-  specificFile = null,
-) => {
+export const fetchManifestFromGithub = async (repoFullName, specificFile = null) => {
   const validation = validateGithubRepo(repoFullName);
   if (!validation.valid) throw new Error(validation.reason);
-
+  
+  const cleanRepo = validation.cleaned;  
   if (specificFile) {
-    return fetchFile(repoFullName, specificFile);
+    return fetchFile(cleanRepo, specificFile);
   }
 
   for (const file of MANIFEST_FILES) {
     try {
-      const result = await fetchFile(repoFullName, file);
+      const result = await fetchFile(cleanRepo, file);
       if (result) return result;
     } catch {
       continue;
     }
   }
 
-  throw new Error("No supported manifest file found in repository root.");
+  throw new Error('No supported manifest file found in repository root.');
 };
 
 const fetchFile = async (repoFullName, filename) => {
@@ -43,14 +41,13 @@ const fetchFile = async (repoFullName, filename) => {
   const response = await axios.get(url, {
     timeout: 10000,
     headers: {
-      Accept: "application/vnd.github.v3+json",
-      "User-Agent": "DepShield/1.0",
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'DepShield/1.0',
       ...(process.env.GITHUB_TOKEN && {
-        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-      }),
-    },
+        'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`
+      })
+    }
   });
-
   if (response.data.size > 500000) {
     throw new Error("Manifest file too large (max 500KB).");
   }
