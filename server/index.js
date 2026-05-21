@@ -25,12 +25,14 @@ app.use(cors({
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
+  validate: { xForwardedForHeader: false },
   message: { error: 'TOO_MANY_REQUESTS', message: 'Rate limit exceeded. Try again later.' }
 });
 
 const scanLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
+  validate: { xForwardedForHeader: false },
   message: { error: 'TOO_MANY_REQUESTS', message: 'Scan rate limit exceeded. Max 5 scans/minute.' }
 });
 
