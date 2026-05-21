@@ -24,13 +24,9 @@ export const scanVulnerabilities = async (dependencies, ecosystem) => {
 
   for (const chunk of chunks) {
     const queries = chunk.map((dep) => {
-      const cleanVer =
-        dep.version && dep.version !== "unknown"
-          ? semver.clean(dep.version) ||
-            semver.coerce(dep.version)?.version ||
-            null
-          : null;
-          console.log(`[OSV DEBUG] ${dep.name}@${dep.version} → cleaned: ${cleanVer}`);
+      const cleanVer = dep.version && dep.version !== 'unknown'
+        ? semver.clean(dep.version) || semver.coerce(dep.version)?.version || null
+        : null;
       return {
         package: { name: dep.name, ecosystem: osvEcosystem },
         ...(cleanVer ? { version: cleanVer } : {}),
@@ -38,43 +34,52 @@ export const scanVulnerabilities = async (dependencies, ecosystem) => {
     });
 
     try {
-      const response = await axios.post(
-        OSV_BATCH_URL,
-        { queries },
-        {
-          timeout: 30000,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+      const response = await axios.post(OSV_BATCH_URL, { queries }, {
+        timeout: 30000,
+        headers: { 'Content-Type': 'application/json' },
+      });
 
       const results = response.data.results || [];
+
+      const vulnIds = [];
       results.forEach((result, idx) => {
         const dep = chunk[idx];
-        if (result.vulns && result.vulns.length > 0) {
-          for (const vuln of result.vulns) {
-            const severity = extractSeverity(vuln);
-            const fixedVersion = extractFixedVersion(vuln, dep.name);
-            const cveId =
-              vuln.aliases?.find((a) => a.startsWith("CVE-")) || vuln.id;
-
-            vulnerabilities.push({
-              packageName: dep.name,
-              installedVersion: dep.version,
-              fixedVersion,
-              severity,
-              cveId,
-              description:
-                vuln.summary ||
-                vuln.details?.slice(0, 200) ||
-                "No description available.",
-              aliases: vuln.aliases || [],
-            });
-          }
-        }
-        console.log(`[OSV DEBUG] ${chunk[idx].name}: ${result.vulns?.length || 0} vulns`);
+        (result.vulns || []).forEach(vuln => {
+          vulnIds.push({ id: vuln.id, dep });
+        });
       });
+
+      const DETAIL_BATCH = 20;
+      for (let i = 0; i < vulnIds.length; i += DETAIL_BATCH) {
+        const batch = vulnIds.slice(i, i + DETAIL_BATCH);
+        const detailResults = await Promise.allSettled(
+          batch.map(({ id }) =>
+            axios.get(`https://api.osv.dev/v1/vulns/${id}`, { timeout: 10000 })
+          )
+        );
+
+        detailResults.forEach((result, idx) => {
+          if (result.status !== 'fulfilled') return;
+          const vuln = result.value.data;
+          const dep = batch[idx].dep;
+          const severity = extractSeverity(vuln);
+          const fixedVersion = extractFixedVersion(vuln, dep.name);
+          const cveId = vuln.aliases?.find(a => a.startsWith('CVE-')) || vuln.id;
+
+          vulnerabilities.push({
+            packageName: dep.name,
+            installedVersion: dep.version,
+            fixedVersion,
+            severity,
+            cveId,
+            description: vuln.summary || vuln.details?.slice(0, 200) || 'No description available.',
+            aliases: vuln.aliases || []
+          });
+        });
+      }
+
     } catch (err) {
-      console.error("[OSV] Batch query error:", err.message);
+      console.error('[OSV] Batch query error:', err.message);
     }
   }
 
@@ -83,53 +88,65 @@ export const scanVulnerabilities = async (dependencies, ecosystem) => {
 
 export const fetchRecentVulnerabilities = async () => {
   const packages = [
-    { name: "lodash", ecosystem: "npm" },
-    { name: "axios", ecosystem: "npm" },
-    { name: "express", ecosystem: "npm" },
-    { name: "node-fetch", ecosystem: "npm" },
-    { name: "minimist", ecosystem: "npm" },
-    { name: "requests", ecosystem: "PyPI" },
-    { name: "Pillow", ecosystem: "PyPI" },
-    { name: "django", ecosystem: "PyPI" },
-    { name: "log4j-core", ecosystem: "Maven" },
-    { name: "spring-core", ecosystem: "Maven" },
-    { name: "nokogiri", ecosystem: "RubyGems" },
-    { name: "rails", ecosystem: "RubyGems" },
-    { name: "golang.org/x/net", ecosystem: "Go" },
-    { name: "golang.org/x/crypto", ecosystem: "Go" },
+    { name: 'lodash', ecosystem: 'npm' },
+    { name: 'axios', ecosystem: 'npm' },
+    { name: 'express', ecosystem: 'npm' },
+    { name: 'node-fetch', ecosystem: 'npm' },
+    { name: 'minimist', ecosystem: 'npm' },
+    { name: 'requests', ecosystem: 'PyPI' },
+    { name: 'Pillow', ecosystem: 'PyPI' },
+    { name: 'django', ecosystem: 'PyPI' },
+    { name: 'log4j-core', ecosystem: 'Maven' },
+    { name: 'spring-core', ecosystem: 'Maven' },
+    { name: 'nokogiri', ecosystem: 'RubyGems' },
+    { name: 'rails', ecosystem: 'RubyGems' },
+    { name: 'golang.org/x/net', ecosystem: 'Go' },
+    { name: 'golang.org/x/crypto', ecosystem: 'Go' },
   ];
 
   const results = [];
-  const queries = packages.map((pkg) => ({
-    package: { name: pkg.name, ecosystem: pkg.ecosystem },
+  const queries = packages.map(pkg => ({
+    package: { name: pkg.name, ecosystem: pkg.ecosystem }
   }));
 
   try {
     const response = await axios.post(
-      "https://api.osv.dev/v1/querybatch",
+      'https://api.osv.dev/v1/querybatch',
       { queries },
-      { timeout: 20000, headers: { "Content-Type": "application/json" } },
+      { timeout: 20000, headers: { 'Content-Type': 'application/json' } }
     );
 
     const batchResults = response.data.results || [];
 
+    const toFetch = [];
     batchResults.forEach((result, idx) => {
-      const pkg = packages[idx];
-      const vulns = result.vulns || [];
-      if (vulns.length > 0) {
-        const vuln = vulns[0];
-        results.push({
-          packageName: pkg.name,
-          ecosystem: pkg.ecosystem,
-          severity: extractSeverity(vuln),
-          cveId: vuln.aliases?.find((a) => a.startsWith("CVE-")) || vuln.id,
-          summary: vuln.summary || "Vulnerability reported.",
-          publishedAt: vuln.published ? new Date(vuln.published) : new Date(),
-        });
+      if (result.vulns?.length > 0) {
+        toFetch.push({ id: result.vulns[0].id, pkg: packages[idx] });
       }
     });
+
+    const detailResults = await Promise.allSettled(
+      toFetch.map(({ id }) =>
+        axios.get(`https://api.osv.dev/v1/vulns/${id}`, { timeout: 10000 })
+      )
+    );
+
+    detailResults.forEach((result, idx) => {
+      if (result.status !== 'fulfilled') return;
+      const vuln = result.value.data;
+      const pkg = toFetch[idx].pkg;
+      results.push({
+        packageName: pkg.name,
+        ecosystem: pkg.ecosystem,
+        severity: extractSeverity(vuln),
+        cveId: vuln.aliases?.find(a => a.startsWith('CVE-')) || vuln.id,
+        summary: vuln.summary || 'Vulnerability reported.',
+        publishedAt: vuln.published ? new Date(vuln.published) : new Date()
+      });
+    });
+
   } catch (err) {
-    console.error("[OSV] Feed batch fetch error:", err.message);
+    console.error('[OSV] Feed batch fetch error:', err.message);
   }
 
   return results
@@ -138,16 +155,27 @@ export const fetchRecentVulnerabilities = async () => {
 };
 
 const extractSeverity = (vuln) => {
-  if (vuln.database_specific?.severity)
-    return vuln.database_specific.severity.toUpperCase();
+  if (vuln.database_specific?.severity){
+    const sev= vuln.database_specific.severity.toUpperCase();
+    if (sev === 'MODERATE') return 'MEDIUM';
+    return sev;
+
+  }
   if (vuln.severity?.length > 0) {
     const cvss = vuln.severity.find((s) => s.type === "CVSS_V3");
     if (cvss) {
-      const score = parseFloat(cvss.score);
-      if (score >= 9.0) return "CRITICAL";
-      if (score >= 7.0) return "HIGH";
-      if (score >= 4.0) return "MEDIUM";
-      return "LOW";
+      const vectorString = cvss.score;
+      const numericScore = parseFloat(
+        vectorString.includes('/') 
+          ? null 
+          : vectorString
+      );
+      if (!isNaN(numericScore)) {
+        if (numericScore >= 9.0) return 'CRITICAL';
+        if (numericScore >= 7.0) return 'HIGH';
+        if (numericScore >= 4.0) return 'MEDIUM';
+        return 'LOW';
+      }
     }
   }
   return "UNKNOWN";
