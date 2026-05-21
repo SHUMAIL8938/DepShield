@@ -30,6 +30,7 @@ export const validateUrl = (urlString) => {
         return { valid: false, reason: 'Private/internal addresses not allowed.' };
       }
     }
+
     return { valid: true };
   } catch {
     return { valid: false, reason: 'Invalid URL format.' };
@@ -42,7 +43,8 @@ export const validateGithubRepo = (repoString) => {
     .replace('http://github.com/', '')
     .replace('github.com/', '')
     .trim()
-    .replace(/\/$/, '');  
+    .replace(/\/$/, '');
+
   const pattern = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
   if (!pattern.test(cleaned)) {
     return { valid: false, reason: 'Invalid GitHub repo format. Use owner/repo.' };
