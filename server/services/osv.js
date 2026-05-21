@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import semver from 'semver';
 const OSV_BATCH_URL = 'https://api.osv.dev/v1/querybatch';
 const CHUNK_SIZE = 1000;
 
@@ -23,10 +23,15 @@ export const scanVulnerabilities = async (dependencies, ecosystem) => {
   }
 
   for (const chunk of chunks) {
-    const queries = chunk.map(dep => ({
-      package: { name: dep.name, ecosystem: osvEcosystem },
-      ...(dep.version && dep.version !== 'unknown' ? { version: dep.version } : {})
-    }));
+   const queries = chunk.map(dep => {
+  const cleanVer = dep.version && dep.version !== 'unknown'
+    ? (semver.clean(dep.version) || semver.coerce(dep.version)?.version || null)
+    : null;
+  return {
+    package: { name: dep.name, ecosystem: osvEcosystem },
+    ...(cleanVer ? { version: cleanVer } : {})
+  };
+});
 
     try {
       const response = await axios.post(OSV_BATCH_URL, { queries }, {
@@ -131,7 +136,7 @@ const extractSeverity = (vuln) => {
   return 'UNKNOWN';
 };
 
-const extractFixedVersion = (vuln, pkgName) => {``
+const extractFixedVersion = (vuln, pkgName) => {
   const affected = vuln.affected || [];
   for (const aff of affected) {
     if (aff.package?.name === pkgName) {
