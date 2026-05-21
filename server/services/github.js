@@ -1,13 +1,24 @@
-import axios from 'axios';
-import { validateGithubRepo } from '../utils/ssrfGuard.js';
-import { detectEcosystem } from '../utils/manifestParser.js';
+import axios from "axios";
+import { validateGithubRepo } from "../utils/ssrfGuard.js";
+import { detectEcosystem } from "../utils/manifestParser.js";
 
 const MANIFEST_FILES = [
-  'package.json', 'requirements.txt', 'Pipfile', 'pyproject.toml',
-  'pom.xml', 'build.gradle', 'Gemfile', 'go.mod', 'composer.json', 'Cargo.toml'
+  "package.json",
+  "requirements.txt",
+  "Pipfile",
+  "pyproject.toml",
+  "pom.xml",
+  "build.gradle",
+  "Gemfile",
+  "go.mod",
+  "composer.json",
+  "Cargo.toml",
 ];
 
-export const fetchManifestFromGithub = async (repoFullName, specificFile = null) => {
+export const fetchManifestFromGithub = async (
+  repoFullName,
+  specificFile = null,
+) => {
   const validation = validateGithubRepo(repoFullName);
   if (!validation.valid) throw new Error(validation.reason);
 
@@ -24,7 +35,7 @@ export const fetchManifestFromGithub = async (repoFullName, specificFile = null)
     }
   }
 
-  throw new Error('No supported manifest file found in repository root.');
+  throw new Error("No supported manifest file found in repository root.");
 };
 
 const fetchFile = async (repoFullName, filename) => {
@@ -32,16 +43,21 @@ const fetchFile = async (repoFullName, filename) => {
   const response = await axios.get(url, {
     timeout: 10000,
     headers: {
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'DepShield/1.0'
-    }
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "DepShield/1.0",
+      ...(process.env.GITHUB_TOKEN && {
+        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+      }),
+    },
   });
 
   if (response.data.size > 500000) {
-    throw new Error('Manifest file too large (max 500KB).');
+    throw new Error("Manifest file too large (max 500KB).");
   }
 
-  const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
+  const content = Buffer.from(response.data.content, "base64").toString(
+    "utf-8",
+  );
   const ecosystem = detectEcosystem(filename);
 
   return { content, filename, ecosystem };
