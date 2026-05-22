@@ -1,15 +1,15 @@
-import express from 'express';
-import { authenticate } from '../middleware/auth.js';
-import { detectEcosystem, parseManifest } from '../utils/manifestParser.js';
-import { scanVulnerabilities } from '../services/osv.js';
-import { checkOutdatedPackages, fetchLicenses } from '../services/registry.js';
-import { fetchManifestFromGithub } from '../services/github.js';
-import { calculateHealthScore } from '../utils/scorer.js';
-import Scan from '../models/Scan.js';
+import express from "express";
+import { authenticate } from "../middleware/auth.js";
+import { detectEcosystem, parseManifest } from "../utils/manifestParser.js";
+import { scanVulnerabilities } from "../services/osv.js";
+import { checkOutdatedPackages, fetchLicenses } from "../services/registry.js";
+import { fetchManifestFromGithub } from "../services/github.js";
+import { calculateHealthScore } from "../utils/scorer.js";
+import Scan from "../models/Scan.js";
 
 const router = express.Router();
 
-router.post('/', authenticate, async (req, res) => {
+router.post("/", authenticate, async (req, res) => {
   const startTime = Date.now();
 
   try {
@@ -24,10 +24,20 @@ router.post('/', authenticate, async (req, res) => {
       ecosystem = result.ecosystem;
     } else {
       if (!content || !filename) {
-        return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Content and filename required.' });
+        return res
+          .status(400)
+          .json({
+            error: "VALIDATION_ERROR",
+            message: "Content and filename required.",
+          });
       }
       if (content.length > 500000) {
-        return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'File too large. Max 500KB.' });
+        return res
+          .status(400)
+          .json({
+            error: "VALIDATION_ERROR",
+            message: "File too large. Max 500KB.",
+          });
       }
       manifestContent = content;
       manifestFilename = filename;
@@ -35,50 +45,71 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     if (!ecosystem) {
-      return res.status(400).json({ error: 'UNSUPPORTED_FILE', message: 'Unsupported manifest file type.' });
+      return res
+        .status(400)
+        .json({
+          error: "UNSUPPORTED_FILE",
+          message: "Unsupported manifest file type.",
+        });
     }
 
     const dependencies = await parseManifest(manifestContent, ecosystem);
 
     if (dependencies.length === 0) {
-      return res.status(400).json({ error: 'NO_DEPENDENCIES', message: 'No dependencies found in manifest.' });
+      return res
+        .status(400)
+        .json({
+          error: "NO_DEPENDENCIES",
+          message: "No dependencies found in manifest.",
+        });
     }
 
     const [vulnerabilities, outdatedPackages, licenses] = await Promise.all([
       scanVulnerabilities(dependencies, ecosystem),
       checkOutdatedPackages(dependencies, ecosystem),
-      fetchLicenses(dependencies, ecosystem)
+      fetchLicenses(dependencies, ecosystem),
     ]);
 
-    const { score, grade } = calculateHealthScore(vulnerabilities, outdatedPackages);
+    const { score, grade } = calculateHealthScore(
+      vulnerabilities,
+      outdatedPackages,
+    );
     const scanDurationMs = Date.now() - startTime;
+
+    const criticalCount = vulnerabilities.filter(
+      (v) => v.severity === "CRITICAL",
+    ).length;
 
     const scan = await Scan.create({
       userId: req.auth().userId,
       ecosystem,
       manifestFile: manifestFilename,
-      sourceType: githubRepo ? 'github' : 'paste',
+      sourceType: githubRepo ? "github" : "paste",
       githubRepo: githubRepo || undefined,
       totalDependencies: dependencies.length,
       healthScore: score,
       grade,
+      vulnerabilityCount: vulnerabilities.length,
+      criticalCount,
       vulnerabilities,
       outdatedPackages,
       licenses,
-      scanDurationMs
+      scanDurationMs,
     });
 
     res.json({ scan });
   } catch (err) {
-    console.error('[SCAN] Error:', err.message);
-    if (err.message.includes('parse') || err.message.includes('JSON')) {
-      return res.status(400).json({ error: 'PARSE_ERROR', message: err.message });
+    console.error("[SCAN] Error:", err.message);
+    if (err.message.includes("parse") || err.message.includes("JSON")) {
+      return res
+        .status(400)
+        .json({ error: "PARSE_ERROR", message: err.message });
     }
-    res.status(500).json({ error: 'SCAN_FAILED', message: err.message });
+    res.status(500).json({ error: "SCAN_FAILED", message: err.message });
   }
 });
 
-router.get('/', authenticate, async (req, res) => {
+router.get("/", authenticate, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
@@ -89,33 +120,51 @@ router.get('/', authenticate, async (req, res) => {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select('-vulnerabilities -outdatedPackages -licenses'),
-      Scan.countDocuments({ userId: req.auth().userId })
+        .select("-vulnerabilities -outdatedPackages -licenses"),
+      Scan.countDocuments({ userId: req.auth().userId }),
     ]);
 
     res.json({ scans, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to fetch scans.' });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to fetch scans." });
   }
 });
 
-router.get('/:id', authenticate, async (req, res) => {
+router.get("/:id", authenticate, async (req, res) => {
   try {
-    const scan = await Scan.findOne({ _id: req.params.id, userId: req.auth().userId });
-    if (!scan) return res.status(404).json({ error: 'NOT_FOUND', message: 'Scan not found.' });
+    const scan = await Scan.findOne({
+      _id: req.params.id,
+      userId: req.auth().userId,
+    });
+    if (!scan)
+      return res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Scan not found." });
     res.json({ scan });
   } catch (err) {
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to fetch scan.' });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to fetch scan." });
   }
 });
 
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete("/:id", authenticate, async (req, res) => {
   try {
-    const scan = await Scan.findOneAndDelete({ _id: req.params.id, userId: req.auth().userId });
-    if (!scan) return res.status(404).json({ error: 'NOT_FOUND', message: 'Scan not found.' });
-    res.json({ message: 'Scan deleted.' });
+    const scan = await Scan.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.auth().userId,
+    });
+    if (!scan)
+      return res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Scan not found." });
+    res.json({ message: "Scan deleted." });
   } catch (err) {
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to delete scan.' });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to delete scan." });
   }
 });
 
