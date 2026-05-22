@@ -70,24 +70,26 @@ export default function NewScan() {
         <div className="text-terminal-gray text-xs">Select input method and provide manifest data</div>
       </div>
 
-      {/* Mode toggle */}
-      <div className="flex gap-0 mb-8 ascii-box overflow-hidden" data-label="INPUT METHOD">
-        <button
-          onClick={() => setMode('paste')}
-          className={`flex-1 py-3 text-xs tracking-widest uppercase transition-all ${
-            mode === 'paste' ? 'bg-terminal-green-faint text-terminal-green border-r border-terminal-border' : 'text-terminal-gray hover:text-terminal-green border-r border-terminal-border'
-          }`}
-        >
-          {mode === 'paste' ? '▸ ' : ''}PASTE MANIFEST
-        </button>
-        <button
-          onClick={() => setMode('github')}
-          className={`flex-1 py-3 text-xs tracking-widest uppercase transition-all ${
-            mode === 'github' ? 'bg-terminal-green-faint text-terminal-green' : 'text-terminal-gray hover:text-terminal-green'
-          }`}
-        >
-          {mode === 'github' ? '▸ ' : ''}GITHUB REPO
-        </button>
+      <div className="mb-8">
+        <div className="text-terminal-gray text-xs uppercase tracking-widest mb-2 px-1">Input Method</div>
+        <div className="flex gap-0 border border-terminal-border overflow-hidden">
+          <button
+            onClick={() => setMode('paste')}
+            className={`flex-1 py-3 text-xs tracking-widest uppercase transition-all ${
+              mode === 'paste' ? 'bg-terminal-green-faint text-terminal-green border-r border-terminal-border' : 'text-terminal-gray hover:text-terminal-green border-r border-terminal-border'
+            }`}
+          >
+            {mode === 'paste' ? '▸ ' : ''}PASTE MANIFEST
+          </button>
+          <button
+            onClick={() => setMode('github')}
+            className={`flex-1 py-3 text-xs tracking-widest uppercase transition-all ${
+              mode === 'github' ? 'bg-terminal-green-faint text-terminal-green' : 'text-terminal-gray hover:text-terminal-green'
+            }`}
+          >
+            {mode === 'github' ? '▸ ' : ''}GITHUB REPO
+          </button>
+        </div>
       </div>
 
       {!scanning ? (
@@ -147,7 +149,7 @@ export default function NewScan() {
                 />
               </div>
               <p className="text-terminal-gray text-xs mt-4">
-                ▸ Public repos only. We'll auto-detect the manifest file in the root directory.
+                ▸ Public repos only. We'll auto-detect the manifest file anywhere in the repo.
               </p>
             </div>
           )}
