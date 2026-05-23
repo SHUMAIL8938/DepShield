@@ -120,7 +120,8 @@ router.get("/", authenticate, async (req, res) => {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select("-vulnerabilities -outdatedPackages -licenses"),
+        .select("-vulnerabilities -outdatedPackages -licenses")
+        .lean(),
       Scan.countDocuments({ userId: req.auth().userId }),
     ]);
 

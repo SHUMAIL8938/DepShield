@@ -16,34 +16,16 @@ const gradeClass = (g) =>
     g
   ] || "";
 
-const SeverityBar = ({ vulns = [] }) => {
-  const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
-  vulns.forEach((v) => counts[v.severity] && counts[v.severity]++);
-  return (
-    <div className="flex gap-2 text-xs">
-      {counts.CRITICAL > 0 && (
-        <span className="badge-critical px-2 py-0.5 rounded">
-          {counts.CRITICAL} CRIT
-        </span>
-      )}
-      {counts.HIGH > 0 && (
-        <span className="badge-high px-2 py-0.5 rounded">
-          {counts.HIGH} HIGH
-        </span>
-      )}
-      {counts.MEDIUM > 0 && (
-        <span className="badge-medium px-2 py-0.5 rounded">
-          {counts.MEDIUM} MED
-        </span>
-      )}
-      {counts.LOW > 0 && (
-        <span className="badge-low px-2 py-0.5 rounded">{counts.LOW} LOW</span>
-      )}
-      {!Object.values(counts).some(Boolean) && (
-        <span className="text-terminal-green text-xs">✓ CLEAN</span>
-      )}
-    </div>
-  );
+const SeverityBar = ({ scan }) => {
+  if (scan.vulnerabilityCount > 0) {
+    return (
+      <div className="flex gap-2 text-xs">
+        {scan.criticalCount > 0 && <span className="badge-critical px-2 py-0.5 rounded">{scan.criticalCount} CRIT</span>}
+        {scan.vulnerabilityCount > 0 && <span className="badge-high px-2 py-0.5 rounded">{scan.vulnerabilityCount} VULNS</span>}
+      </div>
+    );
+  }
+  return <span className="text-terminal-green text-xs">✓ CLEAN</span>;
 };
 
 export default function Dashboard() {
@@ -53,15 +35,14 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    api
-      .get("/scan?limit=20")
-      .then((r) => {
-        setScans(r.data.scans || []);
-        setTotal(r.data.total || 0);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+useEffect(() => {
+  api.get('/scan?limit=10')  
+    .then(r => {
+      setScans(r.data.scans || []);
+      setTotal(r.data.total || 0);
+    })
+    .finally(() => setLoading(false));
+}, []);
 
   const chartData = [...scans]
     .reverse()
@@ -72,10 +53,8 @@ export default function Dashboard() {
       date: new Date(s.createdAt).toLocaleDateString(),
     }));
 
-  const totalVulns = scans.reduce(
-    (acc, s) => acc + (s.vulnerabilityCount || 0),
-    0,
-  );
+  const totalVulns = scans.reduce((acc, s) => acc + (s.vulnerabilityCount || 0), 0);
+
   const avgScore = scans.length
     ? Math.round(scans.reduce((a, s) => a + s.healthScore, 0) / scans.length)
     : 0;
@@ -248,7 +227,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="col-span-3">
-                  <SeverityBar vulns={scan.vulnerabilities} />
+                  <SeverityBar scan={scan} />
                 </div>
                 <div className="col-span-1 text-right text-terminal-gray text-xs">
                   {new Date(scan.createdAt).toLocaleDateString()}
