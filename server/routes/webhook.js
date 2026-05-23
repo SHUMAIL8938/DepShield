@@ -20,12 +20,18 @@ router.post("/register", authenticate, async (req, res) => {
         message: "repoFullName, manifestFile, and ecosystem required.",
       });
     }
+     const cleanedRepo = repoFullName
+      .replace('https://github.com/', '')
+      .replace('http://github.com/', '')
+      .replace('github.com/', '')
+      .trim()
+      .replace(/\/$/, '');
 
     const secret = crypto.randomBytes(32).toString("hex");
 
     const existing = await Webhook.findOne({
       userId: req.auth().userId,
-      repoFullName,
+      repoFullName: cleanedRepo,
     });
     if (existing) {
       existing.manifestFile = manifestFile;
@@ -41,7 +47,7 @@ router.post("/register", authenticate, async (req, res) => {
 
     const webhook = await Webhook.create({
       userId: req.auth().userId,
-      repoFullName,
+      repoFullName: cleanedRepo,
       manifestFile,
       ecosystem,
       secret,
@@ -93,10 +99,16 @@ router.post(
 
       const payload = JSON.parse(req.body.toString());
       const repoFullName = payload.repository?.full_name;
-      console.log("[WEBHOOK] Repo:", repoFullName);
+      const cleanedRepo = repoFullName
+        .replace('https://github.com/', '')
+        .replace('http://github.com/', '')
+        .replace('github.com/', '')
+        .trim()
+        .replace(/\/$/, '');
+      console.log("[WEBHOOK] Repo:", cleanedRepo);
 
       const webhooks = await Webhook.find({
-        repoFullName,
+        repoFullName:cleanedRepo,
         active: true,
       }).select("+secret");
 
