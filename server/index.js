@@ -37,7 +37,10 @@ const scanLimiter = rateLimit({
 });
 
 app.use(globalLimiter);
-app.use(express.json({ limit: '500kb' }));
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/webhook/github') return next();
+  express.json({ limit: '500kb' })(req, res, next);
+});
 app.use(clerkMiddleware());
 
 app.use('/api/scan', scanLimiter, scanRoutes);
