@@ -8,7 +8,8 @@ import { parseManifest } from "../utils/manifestParser.js";
 import { scanVulnerabilities } from "../services/osv.js";
 import { checkOutdatedPackages, fetchLicenses } from "../services/registry.js";
 import { calculateHealthScore } from "../utils/scorer.js";
-
+import axios from "axios";
+import { sendVulnerabilityAlert } from "../services/email.js";
 const router = express.Router();
 
 router.post("/register", authenticate, async (req, res) => {
@@ -20,12 +21,12 @@ router.post("/register", authenticate, async (req, res) => {
         message: "repoFullName, manifestFile, and ecosystem required.",
       });
     }
-     const cleanedRepo = repoFullName
-      .replace('https://github.com/', '')
-      .replace('http://github.com/', '')
-      .replace('github.com/', '')
+    const cleanedRepo = repoFullName
+      .replace("https://github.com/", "")
+      .replace("http://github.com/", "")
+      .replace("github.com/", "")
       .trim()
-      .replace(/\/$/, '');
+      .replace(/\/$/, "");
 
     const secret = crypto.randomBytes(32).toString("hex");
 
@@ -51,6 +52,7 @@ router.post("/register", authenticate, async (req, res) => {
       manifestFile,
       ecosystem,
       secret,
+      emailAlerts: req.body.emailAlerts !== false,
     });
 
     res.json({
@@ -100,15 +102,15 @@ router.post(
       const payload = JSON.parse(req.body.toString());
       const repoFullName = payload.repository?.full_name;
       const cleanedRepo = repoFullName
-        .replace('https://github.com/', '')
-        .replace('http://github.com/', '')
-        .replace('github.com/', '')
+        .replace("https://github.com/", "")
+        .replace("http://github.com/", "")
+        .replace("github.com/", "")
         .trim()
-        .replace(/\/$/, '');
+        .replace(/\/$/, "");
       console.log("[WEBHOOK] Repo:", cleanedRepo);
 
       const webhooks = await Webhook.find({
-        repoFullName:cleanedRepo,
+        repoFullName: cleanedRepo,
         active: true,
       }).select("+secret");
 
@@ -144,7 +146,21 @@ router.post(
     }
   },
 );
-
+router.patch('/:id/alerts', authenticate, async (req, res) => {
+  try {
+    const webhook = await Webhook.findOne({ 
+      _id: req.params.id, 
+      userId: req.auth().userId 
+    });
+    if (!webhook) return res.status(404).json({ error: 'NOT_FOUND' });
+    
+    webhook.emailAlerts = req.body.emailAlerts;
+    await webhook.save();
+    res.json({ emailAlerts: webhook.emailAlerts });
+  } catch (err) {
+    res.status(500).json({ error: 'INTERNAL_ERROR' });
+  }
+});
 const triggerScan = async (webhook) => {
   try {
     const startTime = Date.now();
@@ -182,6 +198,32 @@ const triggerScan = async (webhook) => {
       vulnerabilityCount: vulnerabilities.length,
       criticalCount,
     });
+    let userEmail = null;
+    try {
+      const clerkRes = await axios.get(
+        `https://api.clerk.com/v1/users/${webhook.userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
+          },
+          timeout: 5000,
+        },
+      );
+      userEmail = clerkRes.data.email_addresses?.[0]?.email_address;
+    } catch (err) {
+      console.error("[EMAIL] Failed to fetch user email:", err.message);
+    }
+    if (webhook.emailAlerts) {
+      await sendVulnerabilityAlert({
+        userEmail,
+        repoName: webhook.repoFullName,
+        grade,
+        healthScore: score,
+        vulnerabilities,
+        scanId: scan._id,
+      });
+
+    }
   } catch (err) {
     console.error("[WEBHOOK] Auto-scan failed:", err.message);
   }

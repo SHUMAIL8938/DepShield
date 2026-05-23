@@ -8,7 +8,8 @@ const webhookSchema = new mongoose.Schema({
   secret: { type: String, required: true, select: false },
   active: { type: Boolean, default: true },
   lastTriggeredAt: Date,
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  emailAlerts: { type: Boolean, default: true }
 });
 
 export default mongoose.model('Webhook', webhookSchema);
