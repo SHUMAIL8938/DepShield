@@ -51,7 +51,6 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-terminal-bg font-mono">
-      {/* Header */}
       <div className="border-b border-terminal-border bg-terminal-surface px-6 py-3 flex items-center justify-between">
         <span className="text-terminal-green glow font-bold text-sm tracking-widest">[DEPSHIELD]</span>
         <div className="flex items-center gap-4">
@@ -70,7 +69,6 @@ export default function Landing() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-2 gap-12">
-        {/* Left: Boot terminal */}
         <div>
           <div className="ascii-box p-6 mb-8" data-label="SYSTEM BOOT">
             <div className="space-y-1">
@@ -126,7 +124,6 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Right: Live threat feed */}
         <div>
           <div className="ascii-box" data-label="LIVE THREAT INTELLIGENCE FEED">
             <div className="p-4 border-b border-terminal-border flex items-center justify-between">
@@ -180,10 +177,15 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="border-t border-terminal-border mt-12 px-6 py-4 text-center text-terminal-gray text-xs">
-        DEPSHIELD — Powered by OSV.dev · Built with Node.js + React · Deploy your own
-      </div>
+  <div className="mb-2">DEPSHIELD — Powered by OSV.dev </div>
+  <div className="flex items-center justify-center gap-6">
+    <a href="https://github.com/SHUMAIL8938" target="_blank" rel="noopener noreferrer" 
+       className="hover:text-terminal-green transition-colors">
+      [ GITHUB ]
+    </a>
+  </div>
+</div>
     </div>
   );
 }
