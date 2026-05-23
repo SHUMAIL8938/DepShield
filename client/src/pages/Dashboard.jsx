@@ -18,12 +18,7 @@ const gradeClass = (g) =>
 
 const SeverityBar = ({ vulns = [] }) => {
   const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
-  vulns.forEach((v) => {
-    if (v.severity in counts) {
-      counts[v.severity]++;
-    }
-  });
-
+  vulns.forEach((v) => counts[v.severity] && counts[v.severity]++);
   return (
     <div className="flex gap-2 text-xs">
       {counts.CRITICAL > 0 && (
@@ -42,9 +37,7 @@ const SeverityBar = ({ vulns = [] }) => {
         </span>
       )}
       {counts.LOW > 0 && (
-        <span className="badge-low px-2 py-0.5 rounded">
-          {counts.LOW} LOW
-        </span>
+        <span className="badge-low px-2 py-0.5 rounded">{counts.LOW} LOW</span>
       )}
       {!Object.values(counts).some(Boolean) && (
         <span className="text-terminal-green text-xs">✓ CLEAN</span>
@@ -52,7 +45,6 @@ const SeverityBar = ({ vulns = [] }) => {
     </div>
   );
 };
-
 
 export default function Dashboard() {
   const [scans, setScans] = useState([]);
@@ -108,7 +100,6 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
           {
@@ -152,7 +143,6 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Health score trend */}
       {chartData.length > 1 && (
         <div className="ascii-box p-6 mb-8" data-label="HEALTH SCORE TREND">
           <ResponsiveContainer width="100%" height={150}>
@@ -197,7 +187,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Scan history */}
       <div className="ascii-box" data-label="SCAN HISTORY">
         {loading ? (
           <div className="p-8 text-center text-terminal-gray text-xs">
