@@ -150,7 +150,7 @@ const triggerScan = async (webhook) => {
     const startTime = Date.now();
     const { content, filename, ecosystem } = await fetchManifestFromGithub(
       webhook.repoFullName,
-      webhook.manifestFile,
+      null,
     );
     const dependencies = await parseManifest(content, ecosystem);
     const [vulnerabilities, outdatedPackages, licenses] = await Promise.all([
