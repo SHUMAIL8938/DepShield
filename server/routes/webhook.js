@@ -15,12 +15,10 @@ router.post("/register", authenticate, async (req, res) => {
   try {
     const { repoFullName, manifestFile, ecosystem } = req.body;
     if (!repoFullName || !manifestFile || !ecosystem) {
-      return res
-        .status(400)
-        .json({
-          error: "VALIDATION_ERROR",
-          message: "repoFullName, manifestFile, and ecosystem required.",
-        });
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "repoFullName, manifestFile, and ecosystem required.",
+      });
     }
 
     const secret = crypto.randomBytes(32).toString("hex");
@@ -57,12 +55,10 @@ router.post("/register", authenticate, async (req, res) => {
         "Webhook registered. Add this URL and secret to your GitHub repo settings.",
     });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        error: "INTERNAL_ERROR",
-        message: "Failed to register webhook.",
-      });
+    res.status(500).json({
+      error: "INTERNAL_ERROR",
+      message: "Failed to register webhook.",
+    });
   }
 });
 
@@ -86,31 +82,42 @@ router.post(
     try {
       const signature = req.headers["x-hub-signature-256"];
       const event = req.headers["x-github-event"];
-      
-      console.log('[WEBHOOK] Received event:', event);
-      console.log('[WEBHOOK] Has signature:', !!signature);
+
+      console.log("[WEBHOOK] Received event:", event);
+      console.log("[WEBHOOK] Has signature:", !!signature);
 
       if (!signature || event !== "push") {
-        console.log('[WEBHOOK] Ignored - no signature or not push event');
+        console.log("[WEBHOOK] Ignored - no signature or not push event");
         return res.status(200).json({ message: "Ignored." });
       }
 
       const payload = JSON.parse(req.body.toString());
       const repoFullName = payload.repository?.full_name;
-      console.log('[WEBHOOK] Repo:', repoFullName);
+      console.log("[WEBHOOK] Repo:", repoFullName);
 
       const webhooks = await Webhook.find({
         repoFullName,
         active: true,
       }).select("+secret");
-      
-      console.log('[WEBHOOK] Found webhooks:', webhooks.length);
+
+      console.log("[WEBHOOK] Found webhooks:", webhooks.length);
 
       for (const webhook of webhooks) {
         const expected = `sha256=${crypto.createHmac("sha256", webhook.secret).update(req.body).digest("hex")}`;
-        const match = crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-        console.log('[WEBHOOK] HMAC match:', match);
-        
+        if (signature.length !== expected.length) {
+          console.log(
+            "[WEBHOOK] Length mismatch:",
+            signature.length,
+            expected.length,
+          );
+          continue;
+        }
+        const match = crypto.timingSafeEqual(
+          Buffer.from(signature),
+          Buffer.from(expected),
+        );
+        console.log("[WEBHOOK] HMAC match:", match);
+
         if (!match) continue;
 
         webhook.lastTriggeredAt = new Date();
