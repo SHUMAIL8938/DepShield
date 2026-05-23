@@ -150,16 +150,21 @@ export const fetchRecentVulnerabilities = async () => {
   const packages = [
     { name: "lodash", ecosystem: "npm" },
     { name: "axios", ecosystem: "npm" },
+    { name: "vite", ecosystem: "npm" },
     { name: "express", ecosystem: "npm" },
+    { name: "webpack", ecosystem: "npm" },
+    { name: "next", ecosystem: "npm" },
+    { name: "react", ecosystem: "npm" },
     { name: "node-fetch", ecosystem: "npm" },
-    { name: "minimist", ecosystem: "npm" },
     { name: "requests", ecosystem: "PyPI" },
-    { name: "Pillow", ecosystem: "PyPI" },
     { name: "django", ecosystem: "PyPI" },
-    { name: "log4j-core", ecosystem: "Maven" },
+    { name: "flask", ecosystem: "PyPI" },
+    { name: "Pillow", ecosystem: "PyPI" },
+    { name: "cryptography", ecosystem: "PyPI" },
     { name: "spring-core", ecosystem: "Maven" },
-    { name: "nokogiri", ecosystem: "RubyGems" },
+    { name: "log4j-core", ecosystem: "Maven" },
     { name: "rails", ecosystem: "RubyGems" },
+    { name: "nokogiri", ecosystem: "RubyGems" },
     { name: "golang.org/x/net", ecosystem: "Go" },
     { name: "golang.org/x/crypto", ecosystem: "Go" },
   ];
@@ -182,7 +187,7 @@ export const fetchRecentVulnerabilities = async () => {
     batchResults.forEach((result, idx) => {
       const pkg = packages[idx];
       const vulns = result.vulns || [];
-      vulns.slice(0, 3).forEach((v) => {
+      vulns.slice(0, 10).forEach((v) => {
         toFetch.push({ id: v.id, pkg });
       });
     });
