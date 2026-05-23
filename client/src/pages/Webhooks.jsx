@@ -12,11 +12,6 @@ const MANIFEST_FILES = [
 ];
 const ECOSYSTEMS = ["npm", "PyPI", "Maven", "RubyGems", "Go", "crates.io"];
 
-const toggleAlerts = async (id, emailAlerts) => {
-  await api.patch(`/webhook/${id}/alerts`, { emailAlerts });
-  setWebhooks(wh => wh.map(w => w._id === id ? { ...w, emailAlerts } : w));
-};
-
 export default function Webhooks() {
   const [webhooks, setWebhooks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +52,12 @@ export default function Webhooks() {
     await api.delete(`/webhook/${id}`);
     setWebhooks((wh) => wh.filter((w) => w._id !== id));
   };
-
+  const toggleAlerts = async (id, emailAlerts) => {
+    await api.patch(`/webhook/${id}/alerts`, { emailAlerts });
+    setWebhooks((wh) =>
+      wh.map((w) => (w._id === id ? { ...w, emailAlerts } : w)),
+    );
+  };
   return (
     <div className="max-w-3xl">
       <div className="mb-8">
@@ -264,7 +264,6 @@ export default function Webhooks() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-
                   <div className="flex items-center gap-2">
                     <span className="text-terminal-gray text-xs">EMAIL</span>
                     <button
