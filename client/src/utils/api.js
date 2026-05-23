@@ -5,15 +5,20 @@ const api = axios.create({
   withCredentials: true
 });
 
+let tokenGetter = null;
+
 export const setTokenGetter = (getter) => {
-  api.interceptors.request.use(async (config) => {
-    try {
-      const token = await getter();
-      if (token) config.headers['Authorization'] = `Bearer ${token}`;
-    } catch {
-    }
-    return config;
-  });
+  tokenGetter = getter;
 };
+
+api.interceptors.request.use(async (config) => {
+  try {
+    if (tokenGetter) {
+      const token = await tokenGetter();
+      if (token) config.headers['Authorization'] = `Bearer ${token}`;
+    }
+  } catch {}
+  return config;
+});
 
 export default api;
