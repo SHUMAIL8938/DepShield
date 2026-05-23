@@ -55,7 +55,7 @@ const deduplicateVulnerabilities = (vulnerabilities) => {
     result.push({
       ...top,
       fixedVersion: bestFix,
-      description: `${vulns.length} vulnerabilities found. Most severe: ${top.description}`,
+      description: top.description,
       aliases: [...new Set(vulns.flatMap((v) => v.aliases || []))],
     });
   }
@@ -187,7 +187,7 @@ export const fetchRecentVulnerabilities = async () => {
     batchResults.forEach((result, idx) => {
       const pkg = packages[idx];
       const vulns = result.vulns || [];
-      vulns.slice(0, 10).forEach((v) => {
+      vulns.slice(0, 20).forEach((v) => {
         toFetch.push({ id: v.id, pkg });
       });
     });
@@ -197,18 +197,21 @@ export const fetchRecentVulnerabilities = async () => {
         axios.get(`https://api.osv.dev/v1/vulns/${id}`, { timeout: 10000 }),
       ),
     );
+const TWELVE_MONTHS_AGO = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
     detailResults.forEach((result, idx) => {
       if (result.status !== "fulfilled") return;
       const vuln = result.value.data;
       const pkg = toFetch[idx].pkg;
+       const publishedDate = vuln.published ? new Date(vuln.published) : null;
+  if (!publishedDate || publishedDate < TWELVE_MONTHS_AGO) return;
       results.push({
         packageName: pkg.name,
         ecosystem: pkg.ecosystem,
         severity: extractSeverity(vuln),
         cveId: vuln.aliases?.find((a) => a.startsWith("CVE-")) || vuln.id,
         summary: vuln.summary || "Vulnerability reported.",
-        publishedAt: vuln.published ? new Date(vuln.published) : new Date(),
+        publishedAt: publishedDate,
       });
     });
   } catch (err) {
