@@ -86,26 +86,32 @@ router.post(
     try {
       const signature = req.headers["x-hub-signature-256"];
       const event = req.headers["x-github-event"];
+      
+      console.log('[WEBHOOK] Received event:', event);
+      console.log('[WEBHOOK] Has signature:', !!signature);
 
       if (!signature || event !== "push") {
+        console.log('[WEBHOOK] Ignored - no signature or not push event');
         return res.status(200).json({ message: "Ignored." });
       }
 
       const payload = JSON.parse(req.body.toString());
       const repoFullName = payload.repository?.full_name;
-      if (!repoFullName) return res.status(200).json({ message: "No repo." });
+      console.log('[WEBHOOK] Repo:', repoFullName);
 
       const webhooks = await Webhook.find({
         repoFullName,
         active: true,
       }).select("+secret");
+      
+      console.log('[WEBHOOK] Found webhooks:', webhooks.length);
 
       for (const webhook of webhooks) {
         const expected = `sha256=${crypto.createHmac("sha256", webhook.secret).update(req.body).digest("hex")}`;
-        if (
-          !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
-        )
-          continue;
+        const match = crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+        console.log('[WEBHOOK] HMAC match:', match);
+        
+        if (!match) continue;
 
         webhook.lastTriggeredAt = new Date();
         await webhook.save();
