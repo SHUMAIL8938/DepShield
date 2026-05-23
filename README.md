@@ -4,8 +4,8 @@
 
 Paste your manifest file or point at a GitHub repo → get a full security audit: vulnerabilities, outdated packages, license audit, health score, and a live threat feed — all powered by the free OSV.dev database.
 
-**Live demo:** 
----
+**Live:** 
+---https://depshield-app.vercel.app/
 
 ## Features
 
@@ -16,7 +16,6 @@ Paste your manifest file or point at a GitHub repo → get a full security audit
 - **License audit** — surfaces GPL, AGPL, and unknown licenses
 - **GitHub webhook** — auto-scan on every push, HMAC-verified
 - **Live threat feed** — homepage shows recently compromised packages
-- **Terminal UI** — retro CRT aesthetic with scanlines and green-on-black
 
 ---
 
@@ -46,7 +45,7 @@ Paste your manifest file or point at a GitHub repo → get a full security audit
 
 ```bash
 # Clone and install
-git clone https://github.com/yourusername/depshield
+git clone https://github.com/SHUMAIL8938/depshield
 cd depshield
 npm run install:all
 
