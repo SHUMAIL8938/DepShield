@@ -182,7 +182,7 @@ const triggerScan = async (webhook) => {
       (v) => v.severity === "CRITICAL",
     ).length;
 
-    await Scan.create({
+    const scan = await Scan.create({
       userId: webhook.userId,
       ecosystem,
       manifestFile: filename,

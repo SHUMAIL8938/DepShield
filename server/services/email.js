@@ -162,7 +162,6 @@ export const sendVulnerabilityAlert = async ({
     return;
   }
 
-  // only send if there are HIGH or CRITICAL vulnerabilities
   const serious = vulnerabilities.filter(v => 
     v.severity === 'CRITICAL' || v.severity === 'HIGH'
   );
