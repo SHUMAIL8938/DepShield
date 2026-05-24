@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { authenticate } from "../middleware/auth.js";
 import Webhook from "../models/Webhook.js";
 import Scan from "../models/Scan.js";
-import { fetchManifestFromGithub } from "../services/github.js";
+import { fetchManifestFromGithub,fetchAllManifestsFromGithub } from "../services/github.js";
 import { parseManifest } from "../utils/manifestParser.js";
 import { scanVulnerabilities } from "../services/osv.js";
 import { checkOutdatedPackages, fetchLicenses } from "../services/registry.js";
@@ -164,68 +164,91 @@ router.patch('/:id/alerts', authenticate, async (req, res) => {
 const triggerScan = async (webhook) => {
   try {
     const startTime = Date.now();
-    const { content, filename, ecosystem } = await fetchManifestFromGithub(
-      webhook.repoFullName,
-      null,
-    );
-    const dependencies = await parseManifest(content, ecosystem);
-    const [vulnerabilities, outdatedPackages, licenses] = await Promise.all([
-      scanVulnerabilities(dependencies, ecosystem),
-      checkOutdatedPackages(dependencies, ecosystem),
-      fetchLicenses(dependencies, ecosystem),
-    ]);
-    const { score, grade } = calculateHealthScore(
-      vulnerabilities,
-      outdatedPackages,
-    );
-    const criticalCount = vulnerabilities.filter(
-      (v) => v.severity === "CRITICAL",
-    ).length;
+
+    const manifests = await fetchAllManifestsFromGithub(webhook.repoFullName);
+
+    let allVulnerabilities = [];
+    let allOutdated = [];
+    let allLicenses = [];
+    let totalDeps = 0;
+    let primaryEcosystem = null;
+    let scannedFiles = [];
+
+    for (const manifest of manifests) {
+      try {
+        if (!manifest.ecosystem) continue;
+        const dependencies = await parseManifest(manifest.content, manifest.ecosystem);
+        if (dependencies.length === 0) continue;
+
+        if (!primaryEcosystem) primaryEcosystem = manifest.ecosystem;
+        totalDeps += dependencies.length;
+        scannedFiles.push(manifest.path);
+
+        const [vulns, outdated, licenses] = await Promise.all([
+          scanVulnerabilities(dependencies, manifest.ecosystem),
+          checkOutdatedPackages(dependencies, manifest.ecosystem),
+          fetchLicenses(dependencies, manifest.ecosystem),
+        ]);
+
+        allVulnerabilities = [...allVulnerabilities, ...vulns];
+        allOutdated = [...allOutdated, ...outdated];
+        allLicenses = [...allLicenses, ...licenses];
+
+        console.log(`[WEBHOOK] Scanned ${manifest.path}: ${dependencies.length} deps, ${vulns.length} vulns`);
+      } catch (err) {
+        console.log(`[WEBHOOK] Skipping ${manifest.path}: ${err.message}`);
+      }
+    }
+
+    if (totalDeps === 0) throw new Error('No dependencies found in any manifest');
+
+    const { score, grade } = calculateHealthScore(allVulnerabilities, allOutdated);
+    const criticalCount = allVulnerabilities.filter(v => v.severity === 'CRITICAL').length;
 
     const scan = await Scan.create({
       userId: webhook.userId,
-      ecosystem,
-      manifestFile: filename,
-      sourceType: "github",
+      ecosystem: primaryEcosystem || 'npm',
+      manifestFile: scannedFiles.join(', '),
+      sourceType: 'github',
       githubRepo: webhook.repoFullName,
-      totalDependencies: dependencies.length,
+      totalDependencies: totalDeps,
       healthScore: score,
       grade,
-      vulnerabilities,
-      outdatedPackages,
-      licenses,
+      vulnerabilities: allVulnerabilities,
+      outdatedPackages: allOutdated,
+      licenses: allLicenses,
       scanDurationMs: Date.now() - startTime,
-      vulnerabilityCount: vulnerabilities.length,
+      vulnerabilityCount: allVulnerabilities.length,
       criticalCount,
     });
+
     let userEmail = null;
     try {
       const clerkRes = await axios.get(
         `https://api.clerk.com/v1/users/${webhook.userId}`,
         {
-          headers: {
-            Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-          },
+          headers: { Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}` },
           timeout: 5000,
-        },
+        }
       );
       userEmail = clerkRes.data.email_addresses?.[0]?.email_address;
     } catch (err) {
-      console.error("[EMAIL] Failed to fetch user email:", err.message);
+      console.error('[EMAIL] Failed to fetch user email:', err.message);
     }
+
     if (webhook.emailAlerts) {
       await sendVulnerabilityAlert({
         userEmail,
         repoName: webhook.repoFullName,
         grade,
         healthScore: score,
-        vulnerabilities,
+        vulnerabilities: allVulnerabilities,
         scanId: scan._id,
       });
-
     }
+
   } catch (err) {
-    console.error("[WEBHOOK] Auto-scan failed:", err.message);
+    console.error('[WEBHOOK] Auto-scan failed:', err.message);
   }
 };
 

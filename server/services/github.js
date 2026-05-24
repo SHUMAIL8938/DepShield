@@ -72,7 +72,27 @@ console.log("[GITHUB] Manifest candidates:", valid.map((v) => `${v.path}(${v.con
 console.log("[GITHUB] Selected:", valid[0].path);
 return valid[0];
 };
+export const fetchAllManifestsFromGithub = async (repoFullName) => {
+  const validation = validateGithubRepo(repoFullName);
+  if (!validation.valid) throw new Error(validation.reason);
+  const cleanRepo = validation.cleaned;
 
+  const manifestPaths = await findManifestFiles(cleanRepo);
+  if (manifestPaths.length === 0) {
+    throw new Error('No supported manifest file found in repository.');
+  }
+
+  console.log(`[GITHUB] Found ${manifestPaths.length} manifest files:`, manifestPaths);
+
+  const results = await Promise.allSettled(
+    manifestPaths.map(path => fetchFile(cleanRepo, path))
+  );
+
+  return results
+    .filter(r => r.status === 'fulfilled')
+    .map(r => r.value)
+    .filter(m => m.ecosystem !== null);
+};
 export const findManifestFiles = async (repoFullName) => {
   try {
     const repoRes = await axios.get(
