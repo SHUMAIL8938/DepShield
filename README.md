@@ -6,7 +6,7 @@ Paste your manifest file or point at a GitHub repo → get a full security audit
 **Live:** 
 ---https://depshield-app.vercel.app/
 
-## Features
+## Features##
 
 - **Multi-ecosystem** — npm, PyPI, Maven, RubyGems, Go, Packagist, crates.io
 - **Real vulnerability data** — powered by [OSV.dev](https://osv.dev), updated every 6 hours
