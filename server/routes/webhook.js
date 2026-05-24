@@ -221,7 +221,8 @@ const triggerScan = async (webhook) => {
       vulnerabilityCount: allVulnerabilities.length,
       criticalCount,
     });
-
+console.log(`[WEBHOOK] Scan saved: ${scan._id}`);
+console.log(`[WEBHOOK] emailAlerts: ${webhook.emailAlerts}, userId: ${webhook.userId}`);
     let userEmail = null;
     try {
       const clerkRes = await axios.get(

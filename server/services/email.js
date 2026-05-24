@@ -170,9 +170,7 @@ export const sendVulnerabilityAlert = async ({
   vulnerabilities,
   scanId,
 }) => {
-  console.log(
-    `[EMAIL] Alert called - email: ${userEmail}, repo: ${repoName}, vulns: ${vulnerabilities.length}`,
-  );
+  console.log(`[EMAIL] Called - to: ${userEmail}, vulns: ${vulnerabilities.length}, serious: ${vulnerabilities.filter(v => v.severity === 'CRITICAL' || v.severity === 'HIGH').length}`);
 
   if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
     console.log("[EMAIL] Gmail credentials not configured — skipping alert");
