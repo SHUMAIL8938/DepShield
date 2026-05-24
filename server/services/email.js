@@ -217,5 +217,8 @@ export const sendVulnerabilityAlert = async ({
     console.log(`[EMAIL] Alert sent to ${userEmail} for ${repoName}`);
   } catch (err) {
     console.error("[EMAIL] Failed to send:", err.message);
+      console.error("[EMAIL] Error code:", err.code);
+    console.error("[EMAIL] Error response:", err.response);
+    console.error("[EMAIL] Full error:", JSON.stringify(err, null, 2));
   }
 };
