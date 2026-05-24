@@ -3,7 +3,10 @@ import crypto from "crypto";
 import { authenticate } from "../middleware/auth.js";
 import Webhook from "../models/Webhook.js";
 import Scan from "../models/Scan.js";
-import { fetchManifestFromGithub,fetchAllManifestsFromGithub } from "../services/github.js";
+import {
+  fetchManifestFromGithub,
+  fetchAllManifestsFromGithub,
+} from "../services/github.js";
 import { parseManifest } from "../utils/manifestParser.js";
 import { scanVulnerabilities } from "../services/osv.js";
 import { checkOutdatedPackages, fetchLicenses } from "../services/registry.js";
@@ -146,19 +149,19 @@ router.post(
     }
   },
 );
-router.patch('/:id/alerts', authenticate, async (req, res) => {
+router.patch("/:id/alerts", authenticate, async (req, res) => {
   try {
-    const webhook = await Webhook.findOne({ 
-      _id: req.params.id, 
-      userId: req.auth().userId 
+    const webhook = await Webhook.findOne({
+      _id: req.params.id,
+      userId: req.auth().userId,
     });
-    if (!webhook) return res.status(404).json({ error: 'NOT_FOUND' });
-    
+    if (!webhook) return res.status(404).json({ error: "NOT_FOUND" });
+
     webhook.emailAlerts = req.body.emailAlerts;
     await webhook.save();
     res.json({ emailAlerts: webhook.emailAlerts });
   } catch (err) {
-    res.status(500).json({ error: 'INTERNAL_ERROR' });
+    res.status(500).json({ error: "INTERNAL_ERROR" });
   }
 });
 const triggerScan = async (webhook) => {
@@ -177,7 +180,10 @@ const triggerScan = async (webhook) => {
     for (const manifest of manifests) {
       try {
         if (!manifest.ecosystem) continue;
-        const dependencies = await parseManifest(manifest.content, manifest.ecosystem);
+        const dependencies = await parseManifest(
+          manifest.content,
+          manifest.ecosystem,
+        );
         if (dependencies.length === 0) continue;
 
         if (!primaryEcosystem) primaryEcosystem = manifest.ecosystem;
@@ -194,22 +200,30 @@ const triggerScan = async (webhook) => {
         allOutdated = [...allOutdated, ...outdated];
         allLicenses = [...allLicenses, ...licenses];
 
-        console.log(`[WEBHOOK] Scanned ${manifest.path}: ${dependencies.length} deps, ${vulns.length} vulns`);
+        console.log(
+          `[WEBHOOK] Scanned ${manifest.path}: ${dependencies.length} deps, ${vulns.length} vulns`,
+        );
       } catch (err) {
         console.log(`[WEBHOOK] Skipping ${manifest.path}: ${err.message}`);
       }
     }
 
-    if (totalDeps === 0) throw new Error('No dependencies found in any manifest');
+    if (totalDeps === 0)
+      throw new Error("No dependencies found in any manifest");
 
-    const { score, grade } = calculateHealthScore(allVulnerabilities, allOutdated);
-    const criticalCount = allVulnerabilities.filter(v => v.severity === 'CRITICAL').length;
+    const { score, grade } = calculateHealthScore(
+      allVulnerabilities,
+      allOutdated,
+    );
+    const criticalCount = allVulnerabilities.filter(
+      (v) => v.severity === "CRITICAL",
+    ).length;
 
     const scan = await Scan.create({
       userId: webhook.userId,
-      ecosystem: primaryEcosystem || 'npm',
-      manifestFile: scannedFiles.join(', '),
-      sourceType: 'github',
+      ecosystem: primaryEcosystem || "npm",
+      manifestFile: scannedFiles.join(", "),
+      sourceType: "github",
       githubRepo: webhook.repoFullName,
       totalDependencies: totalDeps,
       healthScore: score,
@@ -221,8 +235,10 @@ const triggerScan = async (webhook) => {
       vulnerabilityCount: allVulnerabilities.length,
       criticalCount,
     });
-console.log(`[WEBHOOK] Scan saved: ${scan._id}`);
-console.log(`[WEBHOOK] emailAlerts: ${webhook.emailAlerts}, userId: ${webhook.userId}`);
+    console.log(`[WEBHOOK] Scan saved: ${scan._id}`);
+    console.log(
+      `[WEBHOOK] emailAlerts: ${webhook.emailAlerts}, userId: ${webhook.userId}`,
+    );
     let userEmail = null;
     try {
       const clerkRes = await axios.get(
@@ -230,11 +246,11 @@ console.log(`[WEBHOOK] emailAlerts: ${webhook.emailAlerts}, userId: ${webhook.us
         {
           headers: { Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}` },
           timeout: 5000,
-        }
+        },
       );
       userEmail = clerkRes.data.email_addresses?.[0]?.email_address;
     } catch (err) {
-      console.error('[EMAIL] Failed to fetch user email:', err.message);
+      console.error("[EMAIL] Failed to fetch user email:", err.message);
     }
 
     if (webhook.emailAlerts) {
@@ -245,11 +261,13 @@ console.log(`[WEBHOOK] emailAlerts: ${webhook.emailAlerts}, userId: ${webhook.us
         healthScore: score,
         vulnerabilities: allVulnerabilities,
         scanId: scan._id,
+      }).catch((err) => {
+        console.error("[EMAIL] Failed to send alert:", err.message);
       });
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
-
   } catch (err) {
-    console.error('[WEBHOOK] Auto-scan failed:', err.message);
+    console.error("[WEBHOOK] Auto-scan failed:", err.message);
   }
 };
 
