@@ -1,20 +1,6 @@
-import nodemailer from "nodemailer";
+import { Resend } from 'resend';
 
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: '74.125.130.108',
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-      servername: 'smtp.gmail.com'
-    }
-  });
-};
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const getSeverityColor = (severity) => {
   switch (severity) {
@@ -178,48 +164,45 @@ export const sendVulnerabilityAlert = async ({
 }) => {
   console.log(`[EMAIL] Called - to: ${userEmail}, vulns: ${vulnerabilities.length}, serious: ${vulnerabilities.filter(v => v.severity === 'CRITICAL' || v.severity === 'HIGH').length}`);
 
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
-    console.log("[EMAIL] Gmail credentials not configured — skipping alert");
+  if (!process.env.RESEND_API_KEY) {
+    console.log('[EMAIL] Resend API key not configured — skipping');
     return;
   }
 
   if (!userEmail) {
-    console.log("[EMAIL] No user email — skipping alert");
+    console.log('[EMAIL] No user email — skipping');
     return;
   }
 
   const serious = vulnerabilities.filter(
-    (v) => v.severity === "CRITICAL" || v.severity === "HIGH",
+    v => v.severity === 'CRITICAL' || v.severity === 'HIGH'
   );
 
   if (serious.length === 0) {
-    console.log("[EMAIL] No critical/high vulns — skipping alert");
+    console.log('[EMAIL] No critical/high vulns — skipping');
     return;
   }
 
   try {
-    const transporter = createTransporter();
     const html = buildEmailTemplate({
-      repoName,
-      grade,
-      healthScore,
-      vulnerabilities,
-      scanId,
+      repoName, grade, healthScore, vulnerabilities, scanId,
       serverUrl: process.env.CLIENT_URL,
     });
 
-    await transporter.sendMail({
-      from: `"DepShield" <${process.env.GMAIL_USER}>`,
+    const { data, error } = await resend.emails.send({
+      from: 'DepShield <onboarding@resend.dev>',
       to: userEmail,
-      subject: `⚠️ [DepShield] ${serious.filter((v) => v.severity === "CRITICAL").length > 0 ? "CRITICAL" : "HIGH"} vulnerabilities found in ${repoName}`,
+      subject: `⚠️ [DepShield] ${serious.filter(v => v.severity === 'CRITICAL').length > 0 ? 'CRITICAL' : 'HIGH'} vulnerabilities found in ${repoName}`,
       html,
     });
 
-    console.log(`[EMAIL] Alert sent to ${userEmail} for ${repoName}`);
+    if (error) {
+      console.error('[EMAIL] Resend error:', error);
+      return;
+    }
+
+    console.log(`[EMAIL] Alert sent to ${userEmail}, id: ${data.id}`);
   } catch (err) {
-    console.error("[EMAIL] Failed to send:", err.message);
-      console.error("[EMAIL] Error code:", err.code);
-    console.error("[EMAIL] Error response:", err.response);
-    console.error("[EMAIL] Full error:", JSON.stringify(err, null, 2));
+    console.error('[EMAIL] Failed to send:', err.message);
   }
 };
