@@ -34,7 +34,6 @@ export default function App() {
     <ClerkProvider
       publishableKey={PUBLISHABLE_KEY}
       fallbackRedirectUrl="/dashboard"
-      proxyUrl="https://depshield-app.vercel.app/__clerk"
       appearance={{
         baseTheme: undefined,
         variables: {
