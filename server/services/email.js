@@ -2,16 +2,16 @@ import nodemailer from "nodemailer";
 
 const createTransporter = () => {
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: '74.125.130.108',
     port: 587,
     secure: false,
-    family: 4,
     auth: {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_PASS,
     },
     tls: {
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
+      servername: 'smtp.gmail.com'
     }
   });
 };
