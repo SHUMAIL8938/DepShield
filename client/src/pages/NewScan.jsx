@@ -149,7 +149,7 @@ export default function NewScan() {
                 />
               </div>
               <p className="text-terminal-gray text-xs mt-4">
-                ▸ Public repos only. We'll auto-detect the manifest file anywhere in the repo.
+                ▸ Public repos only. We'll auto-detect ALL the manifest file anywhere in the repo.
               </p>
             </div>
           )}
