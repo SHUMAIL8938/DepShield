@@ -34,6 +34,15 @@ const licenseSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const packageSnapshotSchema = new mongoose.Schema(
+  {
+    name: String,
+    version: String,
+    ecosystem: String,
+  },
+  { _id: false },
+);
+
 const scanSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   ecosystem: { type: String, required: true },
@@ -46,6 +55,7 @@ const scanSchema = new mongoose.Schema({
   vulnerabilities: [vulnerabilitySchema],
   outdatedPackages: [outdatedPackageSchema],
   licenses: [licenseSchema],
+  packages: [packageSnapshotSchema],
   vulnerabilityCount: { type: Number, default: 0 },
   criticalCount: { type: Number, default: 0 },
   scanDurationMs: Number,
