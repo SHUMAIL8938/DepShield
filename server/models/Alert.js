@@ -4,7 +4,7 @@ const alertSchema=new mongoose.Schema({
     userId:{type:String,required:true},
     ghsaId:{type:String,required:true},
     packageName:{type:String,required:true},
-    ecosystem:{type:String,required:tree},
+    ecosystem:{type:String,required:true},
     severity:{type:String},
     sentAt:{type:Date,default:Date.now}
 })
