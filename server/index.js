@@ -10,6 +10,7 @@ import scanRoutes from './routes/scan.js';
 import webhookRoutes from './routes/webhook.js';
 import feedRoutes from './routes/feed.js';
 import { startFeedCron } from './services/feedCron.js';
+import './models/Alert.js';
 
 
 const app = express();

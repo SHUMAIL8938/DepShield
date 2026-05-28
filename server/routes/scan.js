@@ -24,20 +24,16 @@ router.post("/", authenticate, async (req, res) => {
       ecosystem = result.ecosystem;
     } else {
       if (!content || !filename) {
-        return res
-          .status(400)
-          .json({
-            error: "VALIDATION_ERROR",
-            message: "Content and filename required.",
-          });
+        return res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "Content and filename required.",
+        });
       }
       if (content.length > 500000) {
-        return res
-          .status(400)
-          .json({
-            error: "VALIDATION_ERROR",
-            message: "File too large. Max 500KB.",
-          });
+        return res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "File too large. Max 500KB.",
+        });
       }
       manifestContent = content;
       manifestFilename = filename;
@@ -45,23 +41,19 @@ router.post("/", authenticate, async (req, res) => {
     }
 
     if (!ecosystem) {
-      return res
-        .status(400)
-        .json({
-          error: "UNSUPPORTED_FILE",
-          message: "Unsupported manifest file type.",
-        });
+      return res.status(400).json({
+        error: "UNSUPPORTED_FILE",
+        message: "Unsupported manifest file type.",
+      });
     }
 
     const dependencies = await parseManifest(manifestContent, ecosystem);
 
     if (dependencies.length === 0) {
-      return res
-        .status(400)
-        .json({
-          error: "NO_DEPENDENCIES",
-          message: "No dependencies found in manifest.",
-        });
+      return res.status(400).json({
+        error: "NO_DEPENDENCIES",
+        message: "No dependencies found in manifest.",
+      });
     }
 
     const [vulnerabilities, outdatedPackages, licenses] = await Promise.all([
@@ -80,6 +72,12 @@ router.post("/", authenticate, async (req, res) => {
       (v) => v.severity === "CRITICAL",
     ).length;
 
+    const packageSnapshot = dependencies.map((d) => ({
+      name: d.name,
+      version: d.version || "unknown",
+      ecosystem,
+    }));
+
     const scan = await Scan.create({
       userId: req.auth().userId,
       ecosystem,
@@ -94,9 +92,10 @@ router.post("/", authenticate, async (req, res) => {
       vulnerabilities,
       outdatedPackages,
       licenses,
+      packages: packageSnapshot,
       scanDurationMs,
     });
-
+    
     res.json({ scan });
   } catch (err) {
     console.error("[SCAN] Error:", err.message);

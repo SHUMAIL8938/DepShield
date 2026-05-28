@@ -189,6 +189,14 @@ const triggerScan = async (webhook) => {
         if (!primaryEcosystem) primaryEcosystem = manifest.ecosystem;
         totalDeps += dependencies.length;
         scannedFiles.push(manifest.path);
+        allPackages = [
+          ...allPackages,
+          ...dependencies.map((d) => ({
+            name: d.name,
+            version: d.version,
+            ecosystem: manifest.ecosystem,
+          })),
+        ];
 
         const [vulns, outdated, licenses] = await Promise.all([
           scanVulnerabilities(dependencies, manifest.ecosystem),
@@ -231,6 +239,7 @@ const triggerScan = async (webhook) => {
       vulnerabilities: allVulnerabilities,
       outdatedPackages: allOutdated,
       licenses: allLicenses,
+      packages: allPackages,
       scanDurationMs: Date.now() - startTime,
       vulnerabilityCount: allVulnerabilities.length,
       criticalCount,
