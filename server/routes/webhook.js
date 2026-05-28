@@ -176,7 +176,7 @@ const triggerScan = async (webhook) => {
     let totalDeps = 0;
     let primaryEcosystem = null;
     let scannedFiles = [];
-
+    let allPackages = [];
     for (const manifest of manifests) {
       try {
         if (!manifest.ecosystem) continue;
